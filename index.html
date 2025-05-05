@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<!--vibe coded by ChatGPT 4o on 2025-05-04-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Star Rating Confidence Comparator</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2em auto; padding: 1em; line-height: 1.5; }
+    label { display: block; margin-top: 1em; }
+    input[type=number], input[type=range] { width: 100%; padding: 0.4em; margin-top: 0.2em; }
+    button { margin-top: 1em; padding: 0.6em 1.2em; font-size: 1em; }
+    .result { margin-top: 2em; padding: 1em; border: 1px solid #ccc; border-radius: 0.5em; background: #f9f9f9; }
+    h2 { margin-top: 2em; }
+    .slider-row { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5em; }
+    .slider-label { font-weight: bold; margin-left: 1em; white-space: nowrap; }
+    .slider-wrap { display: flex; flex-direction: column; margin-top: 1em; }
+    .slider-heading { font-weight: bold; margin-bottom: 0.3em; display: flex; justify-content: space-between; align-items: center; }
+    .input-row { display: flex; justify-content: space-between; align-items: center; margin-top: 1em; }
+    .input-row label { margin-top: 0; margin-right: 1em; white-space: nowrap; }
+    .input-row input[type=number] { width: auto; flex: 1; }
+    hr.separator { margin: 2em 0; border: none; border-top: 1px solid #ccc; }
+    .bar-container { position: relative; height: 50px; margin-top: 1em; }
+    .bar { position: absolute; height: 20px; background: #4CAF50; border-radius: 4px; }
+    .bar-label { position: absolute; top: 25px; font-size: 0.9em; }
+    .axis { margin-top: 3em; height: 20px; position: relative; background: repeating-linear-gradient(to right, #eee, #eee 1px, transparent 1px, transparent 20%); }
+    .axis-labels { display: flex; justify-content: space-between; font-size: 0.8em; margin-top: 0.2em; }
+  </style>
+</head>
+<body>
+  <h1>Compare Star Ratings with Confidence</h1>
+
+  <div class="slider-wrap">
+    <div class="slider-heading">
+      <span>Item A - Average Rating (1–5):</span>
+      <span class="slider-label" id="labelA">3.0</span>
+    </div>
+    <input type="range" id="ratingA" min="1" max="5" step="0.1" value="3">
+  </div>
+
+  <div class="input-row">
+    <label for="countA">Item A - Number of Reviews:</label>
+    <input type="number" id="countA" min="1" step="1" value="1">
+  </div>
+
+  <hr class="separator">
+
+  <div class="slider-wrap">
+    <div class="slider-heading">
+      <span>Item B - Average Rating (1–5):</span>
+      <span class="slider-label" id="labelB">3.0</span>
+    </div>
+    <input type="range" id="ratingB" min="1" max="5" step="0.1" value="3">
+  </div>
+
+  <div class="input-row">
+    <label for="countB">Item B - Number of Reviews:</label>
+    <input type="number" id="countB" min="1" step="1" value="1">
+  </div>
+
+  <button onclick="compareRatings()">Compare</button>
+
+  <div class="result" id="output" style="display: none;"></div>
+
+  <script>
+    function computeCI(avg, n, stdDev = 1.2) {
+      const margin = 1.96 * (stdDev / Math.sqrt(n));
+      return {
+        lower: Math.max(1, avg - margin),
+        upper: Math.min(5, avg + margin)
+      };
+    }
+
+    function compareRatings() {
+      const ratingA = parseFloat(document.getElementById("ratingA").value);
+      const countA = parseInt(document.getElementById("countA").value);
+      const ratingB = parseFloat(document.getElementById("ratingB").value);
+      const countB = parseInt(document.getElementById("countB").value);
+
+      if (isNaN(ratingA) || isNaN(countA) || isNaN(ratingB) || isNaN(countB)) {
+        alert("Please fill in all fields with valid numbers.");
+        return;
+      }
+
+      const ciA = computeCI(ratingA, countA);
+      const ciB = computeCI(ratingB, countB);
+
+      const scale = 100 / 4;
+      const barAStyle = `left:${((ciA.lower - 1) * scale).toFixed(2)}%;width:${((ciA.upper - ciA.lower) * scale).toFixed(2)}%`;
+      const barBStyle = `left:${((ciB.lower - 1) * scale).toFixed(2)}%;width:${((ciB.upper - ciB.lower) * scale).toFixed(2)}%`;
+
+      const output = document.getElementById("output");
+      output.style.display = 'block';
+      output.innerHTML = `
+        <h2>Results</h2>
+        <p><strong>Item A:</strong> ${ratingA.toFixed(1)} stars (${countA} reviews)<br>
+        95% Confidence Interval: <strong>${ciA.lower.toFixed(2)} – ${ciA.upper.toFixed(2)}</strong></p>
+
+        <p><strong>Item B:</strong> ${ratingB.toFixed(1)} stars (${countB} reviews)<br>
+        95% Confidence Interval: <strong>${ciB.lower.toFixed(2)} – ${ciB.upper.toFixed(2)}</strong></p>
+
+        <div class="axis"></div>
+        <div class="axis-labels">
+          <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+        </div>
+
+        <div class="bar-container">
+          <div class="bar" style="${barAStyle}"></div>
+          <div class="bar-label" style="left:${((ciA.lower - 1) * scale).toFixed(2)}%">Item A</div>
+        </div>
+
+        <div class="bar-container">
+          <div class="bar" style="background:#2196F3;${barBStyle}"></div>
+          <div class="bar-label" style="left:${((ciB.lower - 1) * scale).toFixed(2)}%">Item B</div>
+        </div>
+
+        <p><em>Note: Confidence intervals assume a standard deviation of ~1.2 on a 1–5 scale.</em></p>
+      `;
+    }
+
+    document.getElementById("ratingA").addEventListener("input", function() {
+      document.getElementById("labelA").textContent = parseFloat(this.value).toFixed(1);
+    });
+    document.getElementById("ratingB").addEventListener("input", function() {
+      document.getElementById("labelB").textContent = parseFloat(this.value).toFixed(1);
+    });
+  </script>
+</body>
+</html>
